@@ -7,7 +7,7 @@ __pycache__/
 env/
 venv/
 ENV/
-.venv
+.venv/
 build/
 develop-eggs/
 dist/
@@ -29,12 +29,19 @@ wheels/
 *.spec
 Archium.spec
 
-# Backup and temporary files
+# Directories to exclude from git
+.venv/
+build/
+dist/
+backup/
+temp_extract/
+
+# Application temp files
+archium_update.zip
 *.bak
 *~
 .DS_Store
 .tmp/
-backup/
 
 # IDE
 .vscode/
@@ -43,10 +50,6 @@ backup/
 *.swo
 *~
 
-# Application
-build/
-dist/
-archium_update.zip
-
 # OS
 Thumbs.db
+
