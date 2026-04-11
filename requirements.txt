@@ -1,0 +1,6 @@
+# Archium Requirements
+# Note: Tkinter comes with Python by default
+
+# No external dependencies required for core functionality
+# Tkinter is included with Python
+# Standard library modules used: json, pathlib, subprocess, urllib, zipfile, shutil, datetime

@@ -1,5 +1,8 @@
 @echo off
 REM Build script to compile launcher.py to Archium.exe
+REM Run from: scripts\build_exe.bat
+
+cd ..
 
 echo.
 echo ========================================
@@ -27,17 +30,19 @@ if exist "Archium.exe" (
     echo   Build Successful!
     echo ========================================
     echo.
-    echo Archium.exe has been created
+    echo Archium.exe has been created in the root folder
     echo.
     echo Next Steps:
-    echo 1. Edit launcher.py and set your GitHub repo:
-    echo    self.github_repo = "your-username/archium"
+    echo 1. Verify GitHub repo in launcher.py:
+    echo    self.github_repo = "Primorger/Archium"
     echo.
-    echo 2. Create a GitHub Release with version tag (e.g., v2.0.0)
+    echo 2. Update version.json to current version
     echo.
-    echo 3. Attach your app files as a .zip to the release
+    echo 3. Create a GitHub Release with version tag
     echo.
-    echo 4. Run Archium.exe to test
+    echo 4. Attach app files as .zip to the release
+    echo.
+    echo 5. Run Archium.exe to test
     echo.
 ) else (
     echo Build failed! Check the errors above.

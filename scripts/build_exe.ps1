@@ -1,5 +1,8 @@
 # Build script to compile launcher.py to Archium.exe
-# Run: .\build_exe.ps1
+# Run from root: .\scripts\build_exe.ps1
+# Or from scripts folder: cd .. ; .\build_exe.ps1
+
+Push-Location ..
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
@@ -27,17 +30,20 @@ if (Test-Path "Archium.exe") {
     Write-Host "   Build Successful!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Archium.exe has been created" -ForegroundColor Green
+    Write-Host "Archium.exe has been created in the root folder" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next Steps:" -ForegroundColor Cyan
-    Write-Host "1. Edit launcher.py and set your GitHub repo:" -ForegroundColor Yellow
-    Write-Host '   self.github_repo = "your-username/archium"' -ForegroundColor White
+    Write-Host "1. Verify GitHub repo in launcher.py:" -ForegroundColor Yellow
+    Write-Host '   self.github_repo = "Primorger/Archium"' -ForegroundColor White
     Write-Host ""
-    Write-Host "2. Create a GitHub Release with version tag (e.g., v2.0.0)" -ForegroundColor Yellow
+    Write-Host "2. Update version.json to current version" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "3. Attach your app files as a .zip to the release" -ForegroundColor Yellow
+    Write-Host "3. Create a GitHub Release with version tag" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "4. Run Archium.exe to test" -ForegroundColor Yellow
+    Write-Host "4. Attach app files as .zip to the release" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "5. Run Archium.exe to test" -ForegroundColor Yellow
+    Write-Host ""
     Write-Host ""
 } else {
     Write-Host "Build failed! Check the errors above." -ForegroundColor Red
@@ -48,5 +54,7 @@ if (Test-Path "Archium.exe") {
 if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
 if (Test-Path "__pycache__") { Remove-Item -Recurse -Force "__pycache__" }
 Get-Item "*.spec" -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
+
+Pop-Location
 
 Read-Host "Press Enter to exit"
