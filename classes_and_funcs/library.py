@@ -14,17 +14,30 @@ class Library:
         if book in self.books:
             self.books.remove(book)
             
-    @staticmethod
-    def sort_by_attribute(books: list[Book], attribute: str, reverse=False) -> list[Book]:
-        if not books:
+    def search(self, query: str) -> list[Book]:
+        query = normalize('NFD', query).casefold()
+        
+        def relevance_score(book):
+            normalized_book = normalize('NFD', str(book)).casefold()
+            if query not in normalized_book:
+                return (0, 0, 0)
+            
+            position = normalized_book.find(query)
+            count = normalized_book.count(query)
+            return (1, -position, count)
+        
+        return sorted(self.books, key=relevance_score, reverse=True)
+            
+    def sort_by_attribute(self, attribute: str, reverse=False) -> list[Book]:
+        if not self.books:
             return []
-        if not hasattr(books[0], attribute):
+        if not hasattr(self.books[0], attribute):
             raise ValueError(f"Attribute '{attribute}' does not exist in Book class")
-        # Sortiing helper function
+        # Sorting helper function
         def sort_key(book):
             value = getattr(book, attribute)
             if isinstance(value, str):
                 return normalize('NFD', value).casefold()
             return value
         
-        return sorted(books, key=sort_key, reverse=reverse)
+        return sorted(self.books, key=sort_key, reverse=reverse)
