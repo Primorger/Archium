@@ -15,10 +15,10 @@ class Library:
             self.books.remove(book)
             
     def search(self, query: str) -> list[Book]:
-        query = normalize('NFD', query).casefold()
+        query = query.lower()
         
         def relevance_score(book):
-            normalized_book = normalize('NFD', str(book)).casefold()
+            normalized_book = str(book).lower()
             if query not in normalized_book:
                 return (0, 0, 0)
             
