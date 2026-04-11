@@ -4,13 +4,27 @@
 
 ## ⚡ Quick Start (Users)
 
+### Option 1: **Recommended - Just run the batch file**
+
+```bash
+Archium.bat
+```
+
+**That's it!** The batch file will:
+- ✅ Check if Python is installed
+- ✅ Automatically install Python if needed
+- ✅ Set up the app environment
+- ✅ Launch the application
+
+### Option 2: If you have Python already installed
+
 ```bash
 git clone https://github.com/Primorger/Archium.git
 cd Archium
 Archium.exe
 ```
 
-Done. The application automatically sets up Python environment, checks for updates, and launches.
+**No Python?** Use Option 1 instead - `Archium.bat` handles everything.
 
 ## Features ✨
 
