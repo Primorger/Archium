@@ -24,7 +24,7 @@ jobs:
 
     - name: Build executable
       run: |
-        pyinstaller --onefile --console launcher.py --name=Archium --distpath=. --buildpath=build --specpath=.
+        pyinstaller --onefile --console launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
 
     - name: Create release zip
       run: |
