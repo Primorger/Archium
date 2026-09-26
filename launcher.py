@@ -9,6 +9,7 @@ import zipfile
 import shutil
 import tempfile
 import os
+import re
 from datetime import datetime
 
 
@@ -140,6 +141,130 @@ class ArchiumLauncher:
             return False
         finally:
             shutil.rmtree(update_dir, ignore_errors=True)
+
+    def find_python_command(self):
+        candidates = []
+        for executable in ("python", "python3"):
+            path = shutil.which(executable)
+            if path:
+                candidates.append([path])
+
+        py_launcher = shutil.which("py")
+        if py_launcher:
+            candidates.append([py_launcher, "-3"])
+
+        for command in candidates:
+            try:
+                result = subprocess.run(
+                    command + ["--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+            except (OSError, subprocess.SubprocessError):
+                continue
+
+            match = re.search(r"Python\s+(\d+)\.(\d+)", result.stdout + result.stderr)
+            if result.returncode == 0 and match and tuple(map(int, match.groups())) >= (3, 8):
+                return command
+        return None
+
+    def refresh_windows_path(self):
+        if os.name != "nt":
+            return
+
+        try:
+            import winreg
+
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment") as key:
+                machine_path = winreg.QueryValueEx(key, "Path")[0]
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment") as key:
+                try:
+                    user_path = winreg.QueryValueEx(key, "Path")[0]
+                except FileNotFoundError:
+                    user_path = ""
+            os.environ["PATH"] = os.path.expandvars(f"{machine_path};{user_path}")
+        except (ImportError, OSError):
+            self.log("Could not refresh PATH; checking common Python locations")
+
+    def install_python(self):
+        if os.name != "nt":
+            self.log("Automatic Python installation is supported on Windows only", "ERROR")
+            return None
+
+        self.log("Python 3.8+ was not found. Installing Python 3.11...")
+        winget = shutil.which("winget")
+        if winget:
+            try:
+                result = subprocess.run(
+                    [
+                        winget,
+                        "install",
+                        "--exact",
+                        "--id",
+                        "Python.Python.3.11",
+                        "--scope",
+                        "user",
+                        "--silent",
+                        "--accept-package-agreements",
+                        "--accept-source-agreements",
+                    ],
+                    timeout=600,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    self.refresh_windows_path()
+                    command = self.find_python_command()
+                    if command:
+                        self.log("Python installed successfully")
+                        return command
+            except (OSError, subprocess.SubprocessError) as error:
+                self.log(f"winget install failed ({type(error).__name__}); trying direct download")
+
+        installer_dir = Path(tempfile.mkdtemp(prefix="archium-python-"))
+        installer_path = installer_dir / "python-installer.exe"
+        try:
+            installer_url = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
+            self.log("Downloading Python installer...")
+            urllib.request.urlretrieve(installer_url, installer_path)
+
+            self.log("Installing Python for the current user...")
+            result = subprocess.run(
+                [
+                    str(installer_path),
+                    "/quiet",
+                    "InstallAllUsers=0",
+                    "PrependPath=1",
+                    "Include_test=0",
+                    "Include_pip=1",
+                ],
+                timeout=600,
+                check=False,
+            )
+            if result.returncode != 0:
+                self.log("Python installer returned an error", "ERROR")
+                return None
+
+            self.refresh_windows_path()
+            command = self.find_python_command()
+            if command:
+                self.log("Python installed successfully")
+                return command
+            self.log("Python installed, but no Python 3.8+ command was found", "ERROR")
+            return None
+        except (OSError, urllib.error.URLError, subprocess.SubprocessError) as error:
+            self.log(f"Python installation failed: {error}", "ERROR")
+            return None
+        finally:
+            shutil.rmtree(installer_dir, ignore_errors=True)
+
+    def ensure_python(self):
+        command = self.find_python_command()
+        if command:
+            self.log("Python 3.8+ found")
+            return command
+        return self.install_python()
     
     def launch(self):
         print("\n" + "="*50)
@@ -153,15 +278,15 @@ class ArchiumLauncher:
             self.log(f"Error: {app_file} not found", "ERROR")
             return
 
-        python_executable = sys.executable
+        python_command = [sys.executable]
         if getattr(sys, "frozen", False):
-            python_executable = shutil.which("python")
-            if not python_executable:
-                self.log("Python was not found. Install Python 3.8+ to run Archium.", "ERROR")
+            python_command = self.ensure_python()
+            if not python_command:
+                self.log("Install Python 3.8+ and run Archium.exe again.", "ERROR")
                 return
         
         self.log("Launching...")
-        subprocess.Popen([python_executable, str(app_file)], cwd=str(self.app_dir))
+        subprocess.Popen(python_command + [str(app_file)], cwd=str(self.app_dir))
 
 
 if __name__ == "__main__":

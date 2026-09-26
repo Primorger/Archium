@@ -24,6 +24,30 @@ class ArchiumLauncherTests(unittest.TestCase):
         self.assertFalse(launcher.compare_versions("2.1", "2.1.0"))
         self.assertFalse(launcher.compare_versions("invalid", "2.1.0"))
 
+    def test_finds_installed_supported_python(self):
+        launcher = ArchiumLauncher()
+        with patch("launcher.shutil.which", side_effect=lambda name: "C:/Python/python.exe" if name == "python" else None), patch(
+            "launcher.subprocess.run",
+            return_value=Mock(returncode=0, stdout="Python 3.11.9", stderr=""),
+        ):
+            self.assertEqual(launcher.find_python_command(), ["C:/Python/python.exe"])
+
+    def test_rejects_python_older_than_supported_minimum(self):
+        launcher = ArchiumLauncher()
+        with patch("launcher.shutil.which", side_effect=lambda name: "C:/Python/python.exe" if name == "python" else None), patch(
+            "launcher.subprocess.run",
+            return_value=Mock(returncode=0, stdout="Python 3.7.9", stderr=""),
+        ):
+            self.assertIsNone(launcher.find_python_command())
+
+    def test_installs_python_only_when_missing(self):
+        launcher = ArchiumLauncher()
+        with patch.object(launcher, "find_python_command", side_effect=[None, ["python"]]), patch.object(
+            launcher, "install_python", return_value=["python"]
+        ) as install_python:
+            self.assertEqual(launcher.ensure_python(), ["python"])
+        install_python.assert_called_once_with()
+
     def test_new_github_release_triggers_download(self):
         launcher = ArchiumLauncher()
         launcher.current_version = "2.0.1"

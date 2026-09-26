@@ -4,13 +4,13 @@
 
 ## Quick Start
 
-### Option 1:
+### Option 1: Batch launcher
 
 ```bash
 Archium.bat
 ```
 
-### Option 2:
+### Option 2: Executable launcher
 
 ```bash
 git clone https://github.com/Primorger/Archium.git
@@ -18,7 +18,7 @@ cd Archium
 Archium.exe
 ```
 
-**No Python?** Use Option 1. `Archium.bat` installs Python before starting Archium.
+Both launchers check for Python 3.8 or newer. If Python is missing, they install Python 3.11 for the current user, then start Archium. An internet connection is needed for that first-time installation.
 
 ## Features
 
