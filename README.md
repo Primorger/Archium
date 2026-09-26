@@ -44,6 +44,7 @@ Both launchers check for Python 3.8 or newer. If Python is missing, they install
 ```
 Archium/
 ├── Archium.exe                # RUN THIS (user-facing executable)
+├── Archium.ico                # App and window icon
 ├── launcher.py                # Update checker and application launcher
 │
 ├── .archium/                  # Hidden app wrapper

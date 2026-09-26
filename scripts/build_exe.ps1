@@ -22,7 +22,7 @@ Write-Host "Building Archium.exe..." -ForegroundColor Green
 Write-Host ""
 
 # Build the exe
-pyinstaller --onefile --console launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
+pyinstaller --noconfirm --onefile --console --icon=Archium.ico launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
 
 Write-Host ""
 if (Test-Path "Archium.exe") {

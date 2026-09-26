@@ -35,6 +35,17 @@ class ArchiumApp:
         
         self.root.title(LANGUAGES[self.language]['title'])
         self.root.geometry("1200x700")
+        icon_paths = (
+            Path(__file__).parent / "Archium.ico",
+            Path(__file__).parent.parent / "Archium.ico",
+        )
+        for icon_path in icon_paths:
+            if icon_path.is_file():
+                try:
+                    self.root.iconbitmap(str(icon_path))
+                except tk.TclError:
+                    pass
+                break
         
         # Create UI
         self.create_widgets()

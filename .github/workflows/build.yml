@@ -27,7 +27,7 @@ jobs:
 
     - name: Build executable
       run: |
-        pyinstaller --onefile --console launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
+        pyinstaller --noconfirm --onefile --console --icon=Archium.ico launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
 
     - name: Create release zip
       run: |
@@ -37,6 +37,7 @@ jobs:
         Copy-Item .archium/archium.py temp_release/
         Copy-Item .archium/languages.json temp_release/
         Copy-Item .archium/version.json temp_release/
+        Copy-Item Archium.ico temp_release/
         Copy-Item .archium/classes_and_funcs temp_release/ -Recurse
         New-Item -ItemType Directory -Path temp_release/db -Force | Out-Null
         Compress-Archive -Path temp_release/* -DestinationPath $zipname -Force
