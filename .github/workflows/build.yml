@@ -31,12 +31,10 @@ jobs:
         $tag = "${{ github.ref }}".substring(10)
         $zipname = "archium-$tag.zip"
         New-Item -ItemType Directory -Name temp_release -Force
-        Copy-Item archium.py temp_release/
-        Copy-Item launcher.py temp_release/
-        Copy-Item version.json temp_release/
-        Copy-Item classes_and_funcs temp_release/ -Recurse
-        Copy-Item settings temp_release/ -Recurse
-        Copy-Item db temp_release/ -Recurse
+        Copy-Item .archium/archium.py temp_release/
+        Copy-Item .archium/languages.json temp_release/
+        Copy-Item .archium/version.json temp_release/
+        Copy-Item .archium/classes_and_funcs temp_release/ -Recurse
         Compress-Archive -Path temp_release/* -DestinationPath $zipname -Force
         Remove-Item temp_release -Recurse -Force
       shell: pwsh

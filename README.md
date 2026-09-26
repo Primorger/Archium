@@ -1,6 +1,6 @@
 # Archium 📚
 
-**Archium** is a library management helper application built with Python and Tkinter. It requires **zero setup** - just run the executable and everything works automatically.
+**Archium** is a library management helper application built with Python and Tkinter. Run `Archium.bat` to install Python if needed, or run `Archium.exe` when Python is already installed.
 
 ## ⚡ Quick Start (Users)
 
@@ -13,7 +13,7 @@ Archium.bat
 **That's it!** The batch file will:
 - ✅ Check if Python is installed
 - ✅ Automatically install Python if needed
-- ✅ Set up the app environment
+- ✅ Start the launcher and check for updates
 - ✅ Launch the application
 
 ### Option 2: If you have Python already installed
@@ -24,7 +24,7 @@ cd Archium
 Archium.exe
 ```
 
-**No Python?** Use Option 1 instead - `Archium.bat` handles everything.
+**No Python?** Use Option 1. `Archium.bat` installs Python before starting Archium.
 
 ## Features ✨
 
@@ -35,43 +35,12 @@ Archium.exe
 - ⚙️ **Settings** - Customizable UI font size and results text size
 - 🔄 **Auto-update** - Automatically checks GitHub for new versions
 - 🎨 **Modern UI** - Tkinter ttk widgets for native look
-- ⚙️ **Zero setup** - No manual configuration needed
 
-## What You Get
-
-## What You Get
-
-When you clone the repository, you'll see:
-- `Archium.exe` - **Just run this** (does everything automatically)
-- `.archium/` - Hidden folder containing the app (you don't need to touch this)
-- Other files for developers (can be ignored)
-
-## Installation & Running
-
-### For Users
-
-The **only** step needed:
+## Development
 
 ```bash
-git clone https://github.com/Primorger/Archium.git
-cd Archium
-Archium.exe
-```
-
-That's literally it. The exe will:
-1. Create a Python environment automatically
-2. Check for updates
-3. Download updates if available
-4. Launch the application
-
-You don't need Python installed on your machine - the exe handles everything.
-
-### For Developers
-
-If you want to work on the code:
-
-```bash
-python .archium/archium.py          # Run directly from repo
+cd .archium
+python archium.py
 ```
 
 ## Usage 📖
@@ -90,10 +59,11 @@ python .archium/archium.py          # Run directly from repo
 ```
 Archium/
 ├── Archium.exe                # ← RUN THIS (user-facing executable)
-├── launcher.py                # Bootstrapper that builds everything
+├── launcher.py                # Update checker and application launcher
 │
 ├── .archium/                  # ← Hidden app wrapper
 │   ├── archium.py             # Main GUI application  
+│   ├── languages.json         # English and Bulgarian UI strings
 │   ├── version.json           # Current version
 │   ├── classes_and_funcs/
 │   │   ├── book.py            # Book class
@@ -105,35 +75,32 @@ Archium/
 │
 ├── scripts/                   # Build scripts (for developers)
 │   ├── build_exe.bat
-│   ├── build_exe.ps1
-│   └── LAUNCHER_SETUP.md
+│   └── build_exe.ps1
 │
 ├── .github/workflows/         # CI/CD automation
 │   └── build.yml
 │
-├── Documentation              # Guides
-│   ├── README.md              # This file
-│   ├── SETUP_GUIDE.md         # Complete setup & deploy guide
-│   ├── QUICKSTART.md          # Developer quick start
-│   └── REPO_STRUCTURE.md      # Detailed structure
-│
-└── .venv/                     # Created automatically on first run
+└── tests/                      # Launcher updater tests
 ```
 
-**Hidden files**: `.archium/`, `.venv/`, `.git/` on Windows are hidden from normal view
+On Windows, `.archium/` and `.git/` are hidden by default.
 
 ## Development 🛠️
 
 ### Requirements for Developers
-- Python 3.6+ (to build exe locally)
+- Python 3.8+ (to run the launcher and build the exe locally)
 - Git (to clone and push code)
 
 ### Making Changes
 
 1. Edit files in `.archium/` folder
-2. Test: `python .archium/archium.py`
-3. Commit: `git add . && git commit -m "message"`
-4. Push: `git push origin main`
+2. Test from the app directory:
+  ```powershell
+  cd .archium
+  python archium.py
+  ```
+3. Review `git status` and stage only intended source files, not local `db/` or `settings/` data
+4. Commit and push the changes to `main`
 
 ### Building the Executable (Optional)
 
@@ -149,64 +116,55 @@ cd scripts
 build_exe.bat
 ```
 
-## Publishing Updates 📤
+Run the updater tests with `python -m unittest discover -s tests -v` from the repository root.
 
-Only two steps needed:
+## Publishing a Release
 
-### 1. Update Version
-Edit `.archium/version.json`:
-```json
-{
-  "version": "2.0.1",
-  "last_updated": "2026-04-11T14:00:00"
-}
-```
+1. Set the version in `.archium/version.json` to the release number without a `v` prefix, for example `2.1.1`.
+2. Run the tests from the repository root:
+   ```powershell
+   python -m unittest discover -s tests -v
+   ```
+3. Review `git status` and stage only the intended source, test, and documentation changes. Do not stage local `db/` or `settings/` data. Then commit and push to `main`:
+   ```powershell
+   git add <intended paths>
+   git commit -m "Release v2.1.1"
+   git push origin main
+   ```
+4. Create and push a tag whose version matches `version.json`:
+   ```powershell
+   git tag v2.1.1
+   git push origin v2.1.1
+   ```
+5. GitHub Actions runs on the pushed tag, builds `Archium.exe`, creates the app ZIP, and publishes both as release assets. No manual ZIP upload is needed.
+6. Check the Actions run and the GitHub release. Confirm it contains `Archium.exe` and `archium-v2.1.1.zip` before announcing the release.
 
-### 2. Create GitHub Release
-1. Go to Releases → Create New Release
-2. Tag: `v2.0.1` (MUST match version.json)
-3. Add release notes
-4. Attach `.zip` with `.archium/` folder + launcher.py
-5. GitHub Actions auto-builds exe
-
-**That's it!** Users will get the update automatically when they run Archium.exe.
+Users receive the update the next time they launch Archium.
 
 ### Release Archive Contents
 
-Create a `.zip` file with:
+GitHub Actions creates a `.zip` file containing the application files (not user data):
 ```
-archium-2.0.1.zip
-├── .archium/
-│   ├── archium.py
-│   ├── version.json (2.0.1)
-│   ├── classes_and_funcs/
-│   ├── settings/
-│   └── db/
-├── launcher.py
-└── scripts/
+archium-v2.1.1.zip
+├── archium.py
+├── languages.json
+├── version.json
+└── classes_and_funcs/
 ```
 
 ## How It Works 🔍
 
-### Auto-Bootstrap on First Run
+### Startup and Updates
 
 When user runs `Archium.exe`:
 
-1. **Creates Python environment**
-   - If `.venv/` doesn't exist, creates it
-   - Isolated from system Python
-
-2. **Installs dependencies**
-   - Upgrades pip
-   - Currently uses only standard library (no external packages needed)
-
-3. **Checks for updates**
+1. **Checks for updates**
    - Reads `.archium/version.json`
    - Queries GitHub API for latest release
-   - If newer version: downloads, backs up data, extracts, restores data
+  - If newer version: validates and stages it, preserving `db/` and `settings/`
 
-4. **Launches application**
-   - Runs `archium.py` inside the venv
+2. **Launches the application**
+  - Runs `.archium/archium.py` from its application directory
    - GUI opens in separate window
 
 ### File Storage
@@ -229,46 +187,25 @@ When user runs `Archium.exe`:
   }
   ```
 
-## Data Format 💾
-
-### Book Storage
-Books are stored in `.archium/db/*.txt` as pipe-delimited values:
-```
-title|author|genre|year|length|country|place
-The Hobbit|J.R.R. Tolkien|Fantasy|1937|310|UK|London
-```
-
-### Settings
-User preferences in `.archium/settings/settings.json`:
-```json
-{
-  "language": "en",
-  "ui_font_size": 10,
-  "results_text_size": 9,
-  "last_updated": "2026-04-11T14:00:00"
-}
-```
-
 ## Supported Languages 🌐
 
 - **English** (en)
 - **Bulgarian** (bg)
 
-To add more languages, edit the `LANGUAGES` dictionary in `archium.py`.
+Translations are stored in `.archium/languages.json`. Add a language there using the same keys as `en` and `bg`.
 
 ## Troubleshooting 🔧
 
 ### Application won't start
-- Verify Python 3.6+ is installed
-- Check that `archium.py` exists in the root folder
-- Ensure dependencies are installed: `pip install -r requirements.txt`
+- Verify Python 3.8+ is installed, or start with `Archium.bat` to install it
+- Check that `.archium/archium.py` and `.archium/languages.json` exist
 
 ### Search not working with non-ASCII characters
 - Application uses `.lower()` for case-insensitive search
 - Should work with Cyrillic and other Unicode scripts
 
 ### Settings not saving
-- Ensure `settings/` folder exists and is writable
+- Ensure `.archium/settings/` exists and is writable
 - Check file permissions
 
 ### Updates fail

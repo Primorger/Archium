@@ -7,12 +7,17 @@ import urllib.request
 from pathlib import Path
 import zipfile
 import shutil
+import tempfile
+import os
 from datetime import datetime
 
 
 class ArchiumLauncher:
     def __init__(self):
-        self.root_dir = Path(__file__).parent
+        if getattr(sys, "frozen", False):
+            self.root_dir = Path(sys.executable).resolve().parent
+        else:
+            self.root_dir = Path(__file__).resolve().parent
         self.app_dir = self.root_dir / ".archium"
         self.version_file = self.app_dir / "version.json"
         self.github_repo = "Primorger/Archium"
@@ -31,81 +36,110 @@ class ArchiumLauncher:
             pass
         return '0.0.0'
     
-    def save_version(self, version):
-        try:
-            with open(self.version_file, 'w', encoding='utf-8') as f:
-                json.dump({'version': version, 'last_updated': datetime.now().isoformat()}, f, indent=2)
-        except:
-            pass
-    
     def check_for_updates(self):
         self.log("Checking for updates...")
         try:
-            with urllib.request.urlopen(self.github_api_url, timeout=5) as response:
+            request = urllib.request.Request(
+                self.github_api_url,
+                headers={"User-Agent": "Archium-Updater"},
+            )
+            with urllib.request.urlopen(request, timeout=10) as response:
                 data = json.loads(response.read().decode())
-                latest_version = data.get('tag_name', '').lstrip('v')
+                latest_version = data.get("tag_name", "")
+                if latest_version.lower().startswith("v"):
+                    latest_version = latest_version[1:]
                 
                 download_url = None
                 for asset in data.get('assets', []):
-                    if asset['name'].endswith('.zip'):
-                        download_url = asset['browser_download_url']
+                    if asset.get('name', '').lower().endswith('.zip'):
+                        download_url = asset.get('browser_download_url')
                         break
                 
-                if not download_url or not self.compare_versions(latest_version, self.current_version):
+                if not self.compare_versions(latest_version, self.current_version):
                     self.log(f"Version {self.current_version} is current")
+                    return
+                if not download_url:
+                    self.log(f"Release {latest_version} has no ZIP asset", "WARNING")
                     return
                 
                 self.log(f"Updating {self.current_version} → {latest_version}")
-                self.download_and_update(download_url, latest_version)
+                if self.download_and_update(download_url, latest_version):
+                    self.current_version = latest_version
         except Exception as e:
             self.log(f"Update check skipped ({type(e).__name__})")
     
     def compare_versions(self, latest, current):
         try:
-            l = [int(x) for x in latest.split('.')]
-            c = [int(x) for x in current.split('.')]
-            while len(l) < len(c):
-                l.append(0)
-            while len(c) < len(l):
-                c.append(0)
-            return l > c
-        except:
+            latest_parts = [int(part) for part in latest.split('.')]
+            current_parts = [int(part) for part in current.split('.')]
+            width = max(len(latest_parts), len(current_parts))
+            latest_parts.extend([0] * (width - len(latest_parts)))
+            current_parts.extend([0] * (width - len(current_parts)))
+            return latest_parts > current_parts
+        except (AttributeError, ValueError):
             return False
     
     def download_and_update(self, url, version):
+        update_dir = Path(tempfile.mkdtemp(prefix=".archium-update-", dir=self.root_dir))
+        archive_path = update_dir / "update.zip"
+        extracted_dir = update_dir / "extracted"
+        install_dir = update_dir / "install"
+        backup_dir = update_dir / "backup"
+
         try:
-            zip_path = self.root_dir / "archium_update.zip"
-            backup_dir = self.root_dir / "backup"
-            
-            # Backup
-            if self.app_dir.exists() and backup_dir.exists():
-                shutil.rmtree(backup_dir)
+            self.log("Downloading update...")
+            urllib.request.urlretrieve(url, archive_path)
+
+            self.log("Extracting update...")
+            extracted_dir.mkdir()
+            with zipfile.ZipFile(archive_path, 'r') as archive:
+                root = extracted_dir.resolve()
+                for member in archive.infolist():
+                    destination = (extracted_dir / member.filename).resolve()
+                    if os.path.commonpath((str(root), str(destination))) != str(root):
+                        raise ValueError("Update archive contains an invalid path")
+                archive.extractall(extracted_dir)
+
+            payload_dir = extracted_dir
+            if not (payload_dir / "archium.py").is_file():
+                payload_dir = extracted_dir / ".archium"
+            if not (payload_dir / "archium.py").is_file():
+                raise ValueError("Update archive does not contain archium.py")
+
+            payload_dir.rename(install_dir)
+
+            for data_dir in ("db", "settings"):
+                existing_data = self.app_dir / data_dir
+                if existing_data.exists():
+                    shutil.copytree(existing_data, install_dir / data_dir, dirs_exist_ok=True)
+
+            version_path = install_dir / "version.json"
+            with version_path.open('w', encoding='utf-8') as version_file:
+                json.dump(
+                    {'version': version, 'last_updated': datetime.now().isoformat()},
+                    version_file,
+                    indent=2,
+                )
+
             if self.app_dir.exists():
-                shutil.copytree(self.app_dir, backup_dir)
-            
-            # Download and extract
-            self.log("Downloading...")
-            urllib.request.urlretrieve(url, zip_path)
-            
-            self.log("Extracting...")
-            with zipfile.ZipFile(zip_path, 'r') as z:
-                z.extractall(self.root_dir)
-            
-            zip_path.unlink()
-            if backup_dir.exists():
-                shutil.rmtree(backup_dir)
-            
-            self.save_version(version)
+                self.app_dir.rename(backup_dir)
+            try:
+                install_dir.rename(self.app_dir)
+            except Exception:
+                if backup_dir.exists():
+                    backup_dir.rename(self.app_dir)
+                raise
+
             self.log(f"Updated to {version}")
+            return True
         except Exception as e:
             self.log(f"Update failed: {e}", "ERROR")
-            # Restore backup
-            backup_dir = self.root_dir / "backup"
-            if backup_dir.exists():
-                if self.app_dir.exists():
-                    shutil.rmtree(self.app_dir)
-                shutil.move(str(backup_dir), str(self.app_dir))
-                self.log("Restored backup")
+            if backup_dir.exists() and not self.app_dir.exists():
+                backup_dir.rename(self.app_dir)
+                self.log("Restored previous application")
+            return False
+        finally:
+            shutil.rmtree(update_dir, ignore_errors=True)
     
     def launch(self):
         print("\n" + "="*50)
@@ -118,9 +152,16 @@ class ArchiumLauncher:
         if not app_file.exists():
             self.log(f"Error: {app_file} not found", "ERROR")
             return
+
+        python_executable = sys.executable
+        if getattr(sys, "frozen", False):
+            python_executable = shutil.which("python")
+            if not python_executable:
+                self.log("Python was not found. Install Python 3.8+ to run Archium.", "ERROR")
+                return
         
         self.log("Launching...")
-        subprocess.Popen([sys.executable, str(app_file)])
+        subprocess.Popen([python_executable, str(app_file)], cwd=str(self.app_dir))
 
 
 if __name__ == "__main__":

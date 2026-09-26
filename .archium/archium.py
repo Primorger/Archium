@@ -7,65 +7,8 @@ from classes_and_funcs.library import Library
 from classes_and_funcs.book import Book
 
 
-# Language dictionaries
-LANGUAGES = {
-    'en': {
-        'title': 'Archium - Library Helper',
-        'libraries': 'Libraries',
-        'new_library': 'New Library',
-        'delete_library': 'Delete Library',
-        'search': 'Search',
-        'sort_by': 'Sort by',
-        'results': 'Results',
-        'add_book': 'Add Book',
-        'edit_book': 'Edit Book',
-        'move_book': 'Move Book',
-        'delete_book': 'Delete Book',
-        'clear_results': 'Clear Results',
-        'settings': 'Settings',
-        'no_library_selected': 'No library selected',
-        'book_added': 'Book added successfully!',
-        'book_updated': 'Book updated successfully!',
-        'book_deleted': 'Book deleted!',
-        'book_moved': 'Book moved to',
-        'confirm_delete': 'Delete',
-        'confirm_move': 'Move Book',
-        'select_destination': 'Select destination library (double-click to move):',
-        'success': 'Success',
-        'error': 'Error',
-        'warning': 'Warning',
-        'no_book_selected': 'No book selected',
-        'no_other_libraries': 'No other libraries available',
-    },
-    'bg': {
-        'title': 'Archium - Помощник за библиотеки',
-        'libraries': 'Библиотеки',
-        'new_library': 'Нова библиотека',
-        'delete_library': 'Изтриване на библиотека',
-        'search': 'Търсене',
-        'sort_by': 'Сортиране по',
-        'results': 'Резултати',
-        'add_book': 'Добавяне на книга',
-        'edit_book': 'Редактиране на книга',
-        'move_book': 'Преместване на книга',
-        'delete_book': 'Изтриване на книга',
-        'clear_results': 'Изчистване на резултатите',
-        'settings': 'Настройки',
-        'no_library_selected': 'Няма избрана библиотека',
-        'book_added': 'Книгата е добавена успешно!',
-        'book_updated': 'Книгата е актуализирана успешно!',
-        'book_deleted': 'Книгата е изтрита!',
-        'book_moved': 'Книгата е преместена в',
-        'confirm_delete': 'Изтриване',
-        'confirm_move': 'Преместване на книга',
-        'select_destination': 'Изберете целева библиотека (двойно щракване за преместване):',
-        'success': 'Успех',
-        'error': 'Грешка',
-        'warning': 'Предупреждение',
-        'no_book_selected': 'Няма избрана книга',
-        'no_other_libraries': 'Няма други библиотеки',
-    }
-}
+with (Path(__file__).parent / "languages.json").open(encoding="utf-8") as language_file:
+    LANGUAGES = json.load(language_file)
 
 
 class ArchiumApp:
@@ -85,6 +28,8 @@ class ArchiumApp:
         # Load settings
         self.settings = self.load_settings()
         self.language = self.settings.get('language', 'en')
+        if self.language not in LANGUAGES:
+            self.language = 'en'
         self.ui_font_size = self.settings.get('ui_font_size', 10)
         
         self.root.title(LANGUAGES[self.language]['title'])
@@ -203,13 +148,13 @@ class ArchiumApp:
         
         # Configure headings
         self.results_tree.heading("#0", text="", anchor=tk.W)
-        self.results_tree.heading("Title", text="Title", anchor=tk.W)
-        self.results_tree.heading("Author", text="Author", anchor=tk.W)
-        self.results_tree.heading("Genre", text="Genre", anchor=tk.W)
-        self.results_tree.heading("Year", text="Year", anchor=tk.CENTER)
-        self.results_tree.heading("Length", text="Length", anchor=tk.CENTER)
-        self.results_tree.heading("Country", text="Country", anchor=tk.W)
-        self.results_tree.heading("Place", text="Place", anchor=tk.W)
+        self.results_tree.heading("Title", text=self._('column_title'), anchor=tk.W)
+        self.results_tree.heading("Author", text=self._('column_author'), anchor=tk.W)
+        self.results_tree.heading("Genre", text=self._('column_genre'), anchor=tk.W)
+        self.results_tree.heading("Year", text=self._('column_year'), anchor=tk.CENTER)
+        self.results_tree.heading("Length", text=self._('column_length'), anchor=tk.CENTER)
+        self.results_tree.heading("Country", text=self._('column_country'), anchor=tk.W)
+        self.results_tree.heading("Place", text=self._('column_place'), anchor=tk.W)
         
         self.results_tree.pack(fill=tk.BOTH, expand=True)
         self.current_results = []  # Store book objects
