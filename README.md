@@ -20,6 +20,8 @@ Archium.exe
 
 Both launchers check for Python 3.8 or newer. If Python is missing, they install Python 3.11 for the current user, then start Archium. An internet connection is needed for that first-time installation.
 
+The executable starts the app without showing a console window; the Archium window remains visible.
+
 ## Features
 
 - **Book management** - Add, edit, delete, and move books between libraries

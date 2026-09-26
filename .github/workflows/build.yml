@@ -27,7 +27,7 @@ jobs:
 
     - name: Build executable
       run: |
-        pyinstaller --noconfirm --onefile --console --icon=Archium.ico launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
+        pyinstaller --noconfirm --onefile --windowed --icon=Archium.ico launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
 
     - name: Create release zip
       run: |

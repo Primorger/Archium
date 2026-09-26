@@ -22,7 +22,7 @@ echo Building Archium.exe...
 echo.
 
 REM Build the exe
-pyinstaller --noconfirm --onefile --console --icon=Archium.ico launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
+pyinstaller --noconfirm --onefile --windowed --icon=Archium.ico launcher.py --name=Archium --distpath=. --workpath=build --specpath=.
 
 echo.
 if exist "Archium.exe" (

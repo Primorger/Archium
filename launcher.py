@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import os
 import re
+import ctypes
 from datetime import datetime
 
 
@@ -26,7 +27,14 @@ class ArchiumLauncher:
         self.current_version = self.load_current_version()
     
     def log(self, msg, status="INFO"):
-        print(f"[{status}] {msg}")
+        if sys.stdout is not None:
+            print(f"[{status}] {msg}")
+
+    def show_error(self, message):
+        if os.name == "nt":
+            ctypes.windll.user32.MessageBoxW(None, message, "Archium", 0x10)
+        elif sys.stderr is not None:
+            print(message, file=sys.stderr)
     
     def load_current_version(self):
         try:
@@ -194,6 +202,7 @@ class ArchiumLauncher:
             return None
 
         self.log("Python 3.8+ was not found. Installing Python 3.11...")
+        no_console_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         winget = shutil.which("winget")
         if winget:
             try:
@@ -212,6 +221,7 @@ class ArchiumLauncher:
                     ],
                     timeout=600,
                     check=False,
+                    creationflags=no_console_flags,
                 )
                 if result.returncode == 0:
                     self.refresh_windows_path()
@@ -241,6 +251,7 @@ class ArchiumLauncher:
                 ],
                 timeout=600,
                 check=False,
+                creationflags=no_console_flags,
             )
             if result.returncode != 0:
                 self.log("Python installer returned an error", "ERROR")
@@ -265,6 +276,29 @@ class ArchiumLauncher:
             self.log("Python 3.8+ found")
             return command
         return self.install_python()
+
+    def gui_python_command(self, command):
+        if os.name != "nt" or not command:
+            return command
+
+        executable = Path(command[0])
+        executable_name = executable.name.lower()
+        if executable_name in ("python.exe", "python3.exe"):
+            gui_name = executable.name[:-4] + "w.exe"
+            gui_executable = executable.with_name(gui_name)
+            if gui_executable.is_file():
+                return [str(gui_executable)] + command[1:]
+
+        if executable_name in ("py.exe", "py"):
+            gui_launcher = shutil.which("pyw")
+            if gui_launcher:
+                return [gui_launcher] + command[1:]
+
+        for gui_name in ("pythonw", "python3w"):
+            gui_executable = shutil.which(gui_name)
+            if gui_executable:
+                return [gui_executable] + command[1:]
+        return command
     
     def launch(self):
         print("\n" + "="*50)
@@ -275,22 +309,37 @@ class ArchiumLauncher:
         
         app_file = self.app_dir / "archium.py"
         if not app_file.exists():
-            self.log(f"Error: {app_file} not found", "ERROR")
+            self.show_error(f"Archium could not find its app files:\n{app_file}")
             return
 
         python_command = [sys.executable]
         if getattr(sys, "frozen", False):
             python_command = self.ensure_python()
             if not python_command:
-                self.log("Install Python 3.8+ and run Archium.exe again.", "ERROR")
+                self.show_error(
+                    "Archium could not find or install Python 3.8+.\n"
+                    "Install Python from python.org, then open Archium again."
+                )
                 return
+            python_command = self.gui_python_command(python_command)
         
         self.log("Launching...")
-        subprocess.Popen(python_command + [str(app_file)], cwd=str(self.app_dir))
+        creation_flags = 0
+        if os.name == "nt" and getattr(sys, "frozen", False):
+            creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.Popen(
+            python_command + [str(app_file)],
+            cwd=str(self.app_dir),
+            creationflags=creation_flags,
+        )
 
 
 if __name__ == "__main__":
     try:
         ArchiumLauncher().launch()
     except Exception as e:
-        print(f"\nError: {e}")
+        error_message = f"Archium could not start:\n{e}"
+        if getattr(sys, "frozen", False) and os.name == "nt":
+            ctypes.windll.user32.MessageBoxW(None, error_message, "Archium", 0x10)
+        elif sys.stderr is not None:
+            print(f"\n{error_message}", file=sys.stderr)

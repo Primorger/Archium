@@ -48,6 +48,25 @@ class ArchiumLauncherTests(unittest.TestCase):
             self.assertEqual(launcher.ensure_python(), ["python"])
         install_python.assert_called_once_with()
 
+    def test_logging_is_safe_without_a_console(self):
+        launcher = ArchiumLauncher()
+
+        with patch("launcher.sys.stdout", None):
+            launcher.log("silent windowed log")
+
+    def test_gui_python_command_prefers_matching_pythonw(self):
+        launcher = ArchiumLauncher()
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            python_executable = Path(temporary_dir) / "python.exe"
+            pythonw_executable = Path(temporary_dir) / "pythonw.exe"
+            python_executable.touch()
+            pythonw_executable.touch()
+
+            self.assertEqual(
+                launcher.gui_python_command([str(python_executable)]),
+                [str(pythonw_executable)],
+            )
+
     def test_new_github_release_triggers_download(self):
         launcher = ArchiumLauncher()
         launcher.current_version = "2.0.1"
