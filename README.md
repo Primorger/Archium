@@ -120,7 +120,7 @@ Run the updater tests with `python -m unittest discover -s tests -v` from the re
 
 ## Publishing a Release
 
-1. Set the version in `.archium/version.json` to the release number without a `v` prefix, for example `2.1.1`.
+1. Set the version in `.archium/version.json` to the release number without a `v` prefix, for example `2.1.2`.
 2. Run the tests from the repository root:
    ```powershell
    python -m unittest discover -s tests -v
@@ -128,16 +128,16 @@ Run the updater tests with `python -m unittest discover -s tests -v` from the re
 3. Review `git status` and stage only the intended source, test, and documentation changes. Do not stage local `db/` or `settings/` data. Then commit and push to `main`:
    ```powershell
    git add <intended paths>
-   git commit -m "Release v2.1.1"
+  git commit -m "Release v2.1.2"
    git push origin main
    ```
 4. Create and push a tag whose version matches `version.json`:
    ```powershell
-   git tag v2.1.1
-   git push origin v2.1.1
+  git tag v2.1.2
+  git push origin v2.1.2
    ```
 5. GitHub Actions runs on the pushed tag, builds `Archium.exe`, creates the app ZIP, and publishes both as release assets. No manual ZIP upload is needed.
-6. Check the Actions run and the GitHub release. Confirm it contains `Archium.exe` and `archium-v2.1.1.zip` before announcing the release.
+6. Check the Actions run and the GitHub release. Confirm it contains `Archium.exe` and `archium-v2.1.2.zip` before announcing the release.
 
 Users receive the update the next time they launch Archium.
 
@@ -145,11 +145,12 @@ Users receive the update the next time they launch Archium.
 
 GitHub Actions creates a `.zip` file containing the application files (not user data):
 ```
-archium-v2.1.1.zip
+archium-v2.1.2.zip
 ├── archium.py
 ├── languages.json
 ├── version.json
-└── classes_and_funcs/
+├── classes_and_funcs/
+└── db/ (empty)
 ```
 
 ## How It Works 🔍

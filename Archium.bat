@@ -33,7 +33,7 @@ if %errorlevel% equ 0 (
     if !errorlevel! equ 0 (
         echo [OK] Python installed
         echo.
-        goto :launch
+        goto :python_installed
     )
 )
 
@@ -61,7 +61,7 @@ if !errorlevel! neq 0 (
 )
 
 echo [SETUP] Installing Python (this may take a minute)...
-"%temp%\archium_setup\python.exe" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 Include_pip=1 >nul 2>&1
+"%temp%\archium_setup\python.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_pip=1 >nul 2>&1
 
 if !errorlevel! neq 0 (
     echo [ERROR] Python installation failed
@@ -71,7 +71,17 @@ if !errorlevel! neq 0 (
 
 echo [OK] Python installed
 rmdir /s /q "%temp%\archium_setup" 2>nul
-timeout /t 2 /nobreak >nul 2>&1
+goto :python_installed
+
+:python_installed
+call :refresh_path
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python was installed, but this session cannot find it.
+    echo Close this window, open Archium.bat again, or install Python and add it to PATH.
+    pause
+    exit /b 1
+)
 
 :launch
 echo ============================================================
@@ -82,4 +92,8 @@ echo.
 python launcher.py
 
 exit /b %errorlevel%
+
+:refresh_path
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"`) do set "PATH=%%P"
+exit /b 0
 

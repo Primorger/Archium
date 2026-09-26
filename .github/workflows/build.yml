@@ -38,7 +38,15 @@ jobs:
         Copy-Item .archium/languages.json temp_release/
         Copy-Item .archium/version.json temp_release/
         Copy-Item .archium/classes_and_funcs temp_release/ -Recurse
+        New-Item -ItemType Directory -Path temp_release/db -Force | Out-Null
         Compress-Archive -Path temp_release/* -DestinationPath $zipname -Force
+        Add-Type -AssemblyName System.IO.Compression
+        $archive = [System.IO.Compression.ZipFile]::Open($zipname, [System.IO.Compression.ZipArchiveMode]::Update)
+        try {
+          $archive.CreateEntry("db/") | Out-Null
+        } finally {
+          $archive.Dispose()
+        }
         Remove-Item temp_release -Recurse -Force
       shell: pwsh
 
@@ -48,6 +56,7 @@ jobs:
         files: |
           Archium.exe
           archium-*.zip
+        overwrite_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

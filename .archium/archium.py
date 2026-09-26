@@ -14,11 +14,12 @@ with (Path(__file__).parent / "languages.json").open(encoding="utf-8") as langua
 class ArchiumApp:
     def __init__(self, root):
         self.root = root
-        
-        self.db_path = Path("db")
+
+        app_dir = Path(__file__).resolve().parent
+        self.db_path = app_dir / "db"
         self.db_path.mkdir(exist_ok=True)
-        
-        self.settings_path = Path("settings")
+
+        self.settings_path = app_dir / "settings"
         self.settings_path.mkdir(exist_ok=True)
         self.settings_file = self.settings_path / "settings.json"
         
