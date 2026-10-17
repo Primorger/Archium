@@ -74,11 +74,11 @@ class ArchiumApp:
     def create_widgets(self):
         """Create the main UI layout"""
         # Main container
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.main_frame = ttk.Frame(self.root)
+        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Left sidebar for library management
-        left_frame = ttk.LabelFrame(main_frame, text=self._('libraries'), width=200)
+        left_frame = ttk.LabelFrame(self.main_frame, text=self._('libraries'), width=200)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=5, pady=5)
         
         # Library listbox
@@ -99,7 +99,7 @@ class ArchiumApp:
         ttk.Button(button_frame, text=self._('settings'), command=self.open_settings).pack(fill=tk.X, pady=2)
         
         # Right side - main content
-        right_frame = ttk.Frame(main_frame)
+        right_frame = ttk.Frame(self.main_frame)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
         
         # Library title
@@ -119,10 +119,10 @@ class ArchiumApp:
         # Sort options
         ttk.Label(search_frame, text=self._('sort_by')+":").grid(row=0, column=2, sticky=tk.W, padx=20)
         self.sort_var = tk.StringVar(value="title")
-        self.sort_var.trace('w', lambda *args: self.refresh_display())
         sort_combo = ttk.Combobox(search_frame, textvariable=self.sort_var, 
                                   values=["title", "author", "genre", "year", "length", "country", "place"], state="readonly", width=15)
         sort_combo.grid(row=0, column=3, padx=5)
+        sort_combo.bind('<<ComboboxSelected>>', self.on_sort_selected)
         
         search_frame.columnconfigure(1, weight=1)
         
@@ -211,7 +211,8 @@ class ArchiumApp:
                                     year=parts[3].strip(),
                                     length=parts[4].strip(),
                                     country=parts[5].strip(),
-                                    place=parts[6].strip()
+                                    place=parts[6].strip(),
+                                    notes=Book.decode_notes(parts[7].strip()) if len(parts) > 7 else ""
                                 )
                                 lib.add_book(book)
                             except Exception as e:
@@ -251,6 +252,7 @@ class ArchiumApp:
                 str(book.country)[:12],
                 str(book.place)[:10]
             ))
+        self.results_tree.yview_moveto(0)
     
     def get_selected_book(self):
         """Get the selected book from the tree"""
@@ -275,7 +277,7 @@ class ArchiumApp:
         
         lib_name = self.library_listbox.get(selection[0])
         self.current_library = lib_name
-        self.library_label.config(text=f"Library: {lib_name}")
+        self.library_label.config(text=f"{self._('library')}: {lib_name}")
         self.search_query.delete(0, tk.END)
         self.search()
     
@@ -291,6 +293,10 @@ class ArchiumApp:
         """Handle Enter key press in search box"""
         self.search()
         return 'break'  # Prevent the default Enter behavior
+
+    def on_sort_selected(self, event):
+        """Refresh results using the newly selected sort and search field."""
+        self.refresh_display()
     
     def clear_results(self):
         """Clear the search box and results display"""
@@ -308,7 +314,7 @@ class ArchiumApp:
         # Create edit window
         edit_window = tk.Toplevel(self.root)
         edit_window.title(self._('edit_book'))
-        edit_window.geometry("400x400")
+        edit_window.geometry("400x500")
         edit_window.transient(self.root)
         edit_window.grab_set()
         
@@ -320,18 +326,26 @@ class ArchiumApp:
             'year': book.year,
             'length': book.length,
             'country': book.country,
-            'place': book.place
+            'place': book.place,
+            'notes': book.notes
         }
         
         entry_list = []
         
         for i, (field, value) in enumerate(values.items()):
-            ttk.Label(edit_window, text=f"{field.capitalize()}:").grid(row=i, column=0, sticky=tk.W, padx=10, pady=5)
-            entry = ttk.Entry(edit_window, width=30)
-            entry.insert(0, str(value))
-            entry.grid(row=i, column=1, padx=10, pady=5)
+            label = self._('notes') if field == 'notes' else self._(f'column_{field}')
+            ttk.Label(edit_window, text=f"{label}:").grid(row=i, column=0, sticky=tk.W, padx=10, pady=5)
+            if field == 'notes':
+                entry = tk.Text(edit_window, width=30, height=8, wrap=tk.WORD)
+                entry.insert("1.0", str(value))
+                entry.grid(row=i, column=1, padx=10, pady=5)
+            else:
+                entry = ttk.Entry(edit_window, width=30)
+                entry.insert(0, str(value))
+                entry.grid(row=i, column=1, padx=10, pady=5)
             fields[field] = entry
             entry_list.append(entry)
+            self.bind_clipboard_shortcuts(entry)
         
         def save_changes():
             try:
@@ -339,10 +353,11 @@ class ArchiumApp:
                     title=fields['title'].get() or None,
                     author=fields['author'].get() or None,
                     genre=fields['genre'].get() or None,
-                    year=fields['year'].get() or None,
-                    length=fields['length'].get() or None,
+                    year=fields['year'].get() or "N/A",
+                    length=fields['length'].get() or "N/A",
                     country=fields['country'].get() or None,
-                    place=fields['place'].get() or None
+                    place=fields['place'].get() or None,
+                    notes=fields['notes'].get("1.0", "end-1c")
                 )
                 
                 self.save_library_to_file(self.current_library)
@@ -354,9 +369,10 @@ class ArchiumApp:
         
         self.add_book_context = {'entry_list': entry_list, 'save_book': save_changes}
         for i, entry in enumerate(entry_list):
-            entry.bind('<Return>', lambda event, idx=i: self.on_add_book_enter(event, idx))
+            if not isinstance(entry, tk.Text):
+                entry.bind('<Return>', lambda event, idx=i: self.on_add_book_enter(event, idx))
         
-        ttk.Button(edit_window, text=self._('confirm_move'), command=save_changes).grid(row=len(values), column=0, columnspan=2, pady=10)
+        ttk.Button(edit_window, text=self._('confirm'), command=save_changes).grid(row=len(values), column=0, columnspan=2, pady=10)
     
     def move_selected_book(self):
         """Move the selected book to another library"""
@@ -428,15 +444,14 @@ class ArchiumApp:
         lib = self.libraries[self.current_library]
         query = self.search_query.get().strip()
         
-        # Get results - lib.search() already returns relevance-scored results
+        sort_attr = self.sort_var.get()
         if query:
-            results = lib.search(query)
+            results = lib.search(query, sort_attr)
         else:
             # If no query, sort by the selected attribute
-            sort_attr = self.sort_var.get()
             try:
                 results = lib.sort_by_attribute(sort_attr, reverse=False)
-            except:
+            except ValueError:
                 results = lib.books[:]
         
         # Display results in tree
@@ -451,7 +466,7 @@ class ArchiumApp:
         # Create a new window for adding a book
         add_window = tk.Toplevel(self.root)
         add_window.title(self._('add_book'))
-        add_window.geometry("400x400")
+        add_window.geometry("400x500")
         add_window.transient(self.root)
         add_window.grab_set()
         
@@ -464,18 +479,26 @@ class ArchiumApp:
             'year': '',
             'length': '',
             'country': '',
-            'place': ''
+            'place': '',
+            'notes': ''
         }
         
         entry_list = []  # Keep track of entries in order
         
         for i, (field, default) in enumerate(default_values.items()):
-            ttk.Label(add_window, text=f"{field.capitalize()}:").grid(row=i, column=0, sticky=tk.W, padx=10, pady=5)
-            entry = ttk.Entry(add_window, width=30)
-            entry.insert(0, default)
-            entry.grid(row=i, column=1, padx=10, pady=5)
+            label = self._('notes') if field == 'notes' else self._(f'column_{field}')
+            ttk.Label(add_window, text=f"{label}:").grid(row=i, column=0, sticky=tk.W, padx=10, pady=5)
+            if field == 'notes':
+                entry = tk.Text(add_window, width=30, height=8, wrap=tk.WORD)
+                entry.insert("1.0", default)
+                entry.grid(row=i, column=1, padx=10, pady=5)
+            else:
+                entry = ttk.Entry(add_window, width=30)
+                entry.insert(0, default)
+                entry.grid(row=i, column=1, padx=10, pady=5)
             fields[field] = entry
             entry_list.append(entry)
+            self.bind_clipboard_shortcuts(entry)
         
         def save_book():
             try:
@@ -486,7 +509,8 @@ class ArchiumApp:
                     year=fields['year'].get() or "N/A",
                     length=fields['length'].get() or "N/A",
                     country=fields['country'].get() or "N/A",
-                    place=fields['place'].get() or "N/A"
+                    place=fields['place'].get() or "N/A",
+                    notes=fields['notes'].get("1.0", "end-1c")
                 )
                 
                 lib = self.libraries[self.current_library]
@@ -506,9 +530,82 @@ class ArchiumApp:
         
         # Add Enter key bindings to each field
         for i, entry in enumerate(entry_list):
-            entry.bind('<Return>', lambda event, idx=i: self.on_add_book_enter(event, idx))
+            if not isinstance(entry, tk.Text):
+                entry.bind('<Return>', lambda event, idx=i: self.on_add_book_enter(event, idx))
+
+        context_entry = {'widget': None}
+        entry_menu = tk.Menu(add_window, tearoff=False)
+        entry_menu.add_command(
+            label=self._('cut'),
+            command=lambda: self.cut_entry_selection(context_entry['widget'])
+        )
+        entry_menu.add_command(
+            label=self._('copy'),
+            command=lambda: self.copy_entry_selection(context_entry['widget'])
+        )
+        entry_menu.add_command(
+            label=self._('paste'),
+            command=lambda: self.paste_entry_clipboard(context_entry['widget'])
+        )
+
+        def show_entry_menu(event):
+            context_entry['widget'] = event.widget
+            event.widget.focus_set()
+            try:
+                entry_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                entry_menu.grab_release()
+            return 'break'
+
+        for entry in entry_list:
+            entry.bind('<Button-3>', show_entry_menu)
         
-        ttk.Button(add_window, text=self._('confirm_move'), command=save_book).grid(row=len(default_values), column=0, columnspan=2, pady=10)
+        ttk.Button(add_window, text=self._('confirm'), command=save_book).grid(row=len(default_values), column=0, columnspan=2, pady=10)
+
+    @staticmethod
+    def has_input_selection(widget):
+        if isinstance(widget, tk.Text):
+            return bool(widget.tag_ranges(tk.SEL))
+        return widget.selection_present()
+
+    def bind_clipboard_shortcuts(self, widget):
+        widget.bind('<Control-c>', lambda event: self.copy_entry_selection(event.widget))
+        widget.bind('<Control-x>', lambda event: self.cut_entry_selection(event.widget))
+        widget.bind('<Control-v>', lambda event: self.paste_entry_clipboard(event.widget))
+        widget.bind('<Control-Insert>', lambda event: self.copy_entry_selection(event.widget))
+        widget.bind('<Shift-Insert>', lambda event: self.paste_entry_clipboard(event.widget))
+
+    @classmethod
+    def copy_entry_selection(cls, entry):
+        if cls.has_input_selection(entry):
+            entry.clipboard_clear()
+            entry.clipboard_append(entry.get('sel.first', 'sel.last'))
+        return 'break'
+
+    @classmethod
+    def cut_entry_selection(cls, entry):
+        if cls.has_input_selection(entry):
+            entry.clipboard_clear()
+            entry.clipboard_append(entry.get('sel.first', 'sel.last'))
+            entry.delete('sel.first', 'sel.last')
+        return 'break'
+
+    @staticmethod
+    def paste_entry_clipboard(entry):
+        try:
+            text = entry.clipboard_get()
+        except tk.TclError:
+            return 'break'
+        if ArchiumApp.has_input_selection(entry):
+            entry.delete('sel.first', 'sel.last')
+        entry.insert(tk.INSERT, text)
+        return 'break'
+
+    @staticmethod
+    def get_input_value(widget):
+        if isinstance(widget, tk.Text):
+            return widget.get("1.0", "end-1c")
+        return widget.get()
     
     def on_add_book_enter(self, event, field_index):
         """Handle Enter key press in add book dialog"""
@@ -516,21 +613,22 @@ class ArchiumApp:
         save_book = self.add_book_context['save_book']
         
         # Check if all fields are filled
-        all_filled = all(entry.get().strip() != '' for entry in entry_list)
+        input_fields = [entry for entry in entry_list if not isinstance(entry, tk.Text)]
+        all_filled = all(self.get_input_value(entry).strip() != '' for entry in input_fields)
         
         if all_filled:
             # All fields filled, save the book
             save_book()
         else:
             # Find next empty field
-            for i in range(field_index + 1, len(entry_list)):
-                if entry_list[i].get().strip() == '':
-                    entry_list[i].focus()
+            for i in range(field_index + 1, len(input_fields)):
+                if self.get_input_value(input_fields[i]).strip() == '':
+                    input_fields[i].focus()
                     return 'break'
             # If no empty field after current, loop back to find first empty
-            for i in range(len(entry_list)):
-                if entry_list[i].get().strip() == '':
-                    entry_list[i].focus()
+            for entry in input_fields:
+                if self.get_input_value(entry).strip() == '':
+                    entry.focus()
                     return 'break'
         
         return 'break'
@@ -544,13 +642,13 @@ class ArchiumApp:
         settings_window.grab_set()
         
         # Language selection
-        ttk.Label(settings_window, text="Language:").grid(row=0, column=0, sticky=tk.W, padx=10, pady=10)
+        ttk.Label(settings_window, text=f"{self._('language')}:").grid(row=0, column=0, sticky=tk.W, padx=10, pady=10)
         lang_var = tk.StringVar(value=self.language)
         lang_combo = ttk.Combobox(settings_window, textvariable=lang_var, values=['en', 'bg'], state="readonly", width=20)
         lang_combo.grid(row=0, column=1, padx=10, pady=10)
         
         # UI Text Size
-        ttk.Label(settings_window, text="UI Text Size:").grid(row=1, column=0, sticky=tk.W, padx=10, pady=10)
+        ttk.Label(settings_window, text=f"{self._('ui_text_size')}:").grid(row=1, column=0, sticky=tk.W, padx=10, pady=10)
         ui_size_var = tk.IntVar(value=self.settings.get('ui_font_size', 10))
         ui_size_label = ttk.Label(settings_window, text=str(ui_size_var.get()))
         ui_size_label.grid(row=1, column=2, padx=5, pady=10)
@@ -559,7 +657,7 @@ class ArchiumApp:
         ui_size_slider.grid(row=1, column=1, padx=10, pady=10, sticky=tk.EW)
         
         # Results Text Size
-        ttk.Label(settings_window, text="Results Text Size:").grid(row=2, column=0, sticky=tk.W, padx=10, pady=10)
+        ttk.Label(settings_window, text=f"{self._('results_text_size')}:").grid(row=2, column=0, sticky=tk.W, padx=10, pady=10)
         results_size_var = tk.IntVar(value=self.settings.get('results_text_size', 10))
         results_size_label = ttk.Label(settings_window, text=str(results_size_var.get()))
         results_size_label.grid(row=2, column=2, padx=5, pady=10)
@@ -570,6 +668,8 @@ class ArchiumApp:
         settings_window.columnconfigure(1, weight=1)
         
         def save_settings():
+            search_query = self.search_query.get()
+            sort_attribute = self.sort_var.get()
             self.language = lang_var.get()
             self.settings['language'] = self.language
             self.settings['ui_font_size'] = ui_size_var.get()
@@ -580,10 +680,30 @@ class ArchiumApp:
             self.results_tree.tag_configure('default', font=self.tree_font)
             
             self.save_settings()
-            messagebox.showinfo(self._('success'), "Settings saved! Please restart the application for language changes to take effect.")
             settings_window.destroy()
+            self.apply_language(search_query, sort_attribute)
+            messagebox.showinfo(self._('success'), self._('settings_saved'))
         
-        ttk.Button(settings_window, text="Save", command=save_settings).grid(row=3, column=0, columnspan=3, pady=20)
+        ttk.Button(settings_window, text=self._('save'), command=save_settings).grid(row=3, column=0, columnspan=3, pady=20)
+
+    def apply_language(self, search_query, sort_attribute):
+        self.root.title(self._('title'))
+        self.main_frame.destroy()
+        self.create_widgets()
+
+        selected_index = None
+        for index, library_name in enumerate(self.libraries):
+            self.library_listbox.insert(tk.END, library_name)
+            if library_name == self.current_library:
+                selected_index = index
+
+        if selected_index is not None:
+            self.library_listbox.selection_set(selected_index)
+            self.library_label.config(text=f"{self._('library')}: {self.current_library}")
+
+        self.sort_var.set(sort_attribute)
+        self.search_query.insert(0, search_query)
+        self.refresh_display()
     
     def create_new_library(self):
         """Create a new library"""

@@ -71,7 +71,7 @@ class ArchiumLauncher:
                     self.log(f"Release {latest_version} has no ZIP asset", "WARNING")
                     return
                 
-                self.log(f"Updating {self.current_version} → {latest_version}")
+                self.log(f"Updating {self.current_version} to {latest_version}")
                 if self.download_and_update(download_url, latest_version):
                     self.current_version = latest_version
         except Exception as e:
