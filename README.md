@@ -54,8 +54,15 @@ Archium/
 │   ├── languages.json         # English and Bulgarian UI strings
 │   ├── version.json           # Current version
 │   ├── classes_and_funcs/
-│   │   ├── book.py            # Book class
-│   │   └── library.py         # Library class
+│   │   ├── app.py              # Application initialization
+│   │   ├── book.py             # Book class
+│   │   ├── book_management.py  # Book dialogs and actions
+│   │   ├── clipboard.py        # Cut, copy, paste and context menu
+│   │   ├── library.py          # Library class
+│   │   ├── library_management.py # Library storage and actions
+│   │   ├── settings.py         # Preferences and language changes
+│   │   ├── translations.py     # Language resource loading
+│   │   └── ui.py               # Main window and search results
 │   ├── db/                    # Your book database
 │   │   └── *.txt              # One library per file
 │   └── settings/              # Your preferences
